@@ -1,3 +1,11 @@
 spring:
   application:
     name: movie-recommender
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/mydb}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
