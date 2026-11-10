@@ -2,14 +2,13 @@ package io.github.arvide.movierecommender.repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import io.github.arvide.movierecommender.entity.User;
 
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, Integer> {
     @Query("""
             select distinct u from User u
             join Rating r on r.userId = u.id
