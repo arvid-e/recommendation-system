@@ -1,4 +1,4 @@
-package io.github.arvid_e.movierecommender;
+package io.github.arvide.movierecommender;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
