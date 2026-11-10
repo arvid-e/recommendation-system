@@ -14,7 +14,7 @@ public class Movie {
     @Column(nullable = false, length = 150)
     private String title;
 
-    @Column (nullable = false)
+    @Column(nullable = false)
     private Integer year;
 
     public Movie(Integer id, String title, Integer year) {
@@ -24,5 +24,17 @@ public class Movie {
     }
 
     protected Movie() {
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public Integer getYear() {
+        return year;
     }
 }
