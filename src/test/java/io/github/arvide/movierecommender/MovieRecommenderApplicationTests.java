@@ -1,4 +1,4 @@
-package io.github.arvid_e.movierecommender;
+package io.github.arvide.movierecommender;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
