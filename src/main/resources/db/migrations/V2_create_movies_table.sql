@@ -1,0 +1,5 @@
+CREATE TABLE movies(
+    id    INT PRIMARY KEY DEFAULT,
+    title VARCHAR(150) NOT NULL,
+    year  INT NOT NULL
+)

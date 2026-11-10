@@ -1,0 +1,4 @@
+CREATE TABLE users(
+    id   INT PRIMARY KEY DEFAULT,
+    name VARCHAR(100) NOT NULL
+)
