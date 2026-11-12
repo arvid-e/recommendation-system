@@ -1,7 +1,6 @@
 package io.github.arvide.movierecommender.repository;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,5 +16,5 @@ public interface UserRepository extends JpaRepository<User, Integer> {
             )
             and u.id <> :userId
             """)
-    Optional<List<User>> findUsersSharingMovieWith(Integer userId);
+    List<User> findUsersSharingMovieWith(Integer userId);
 }
