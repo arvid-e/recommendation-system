@@ -6,8 +6,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
+import io.github.arvide.movierecommender.dto.Recommendation;
 import io.github.arvide.movierecommender.entity.Movie;
 import io.github.arvide.movierecommender.entity.Rating;
 import io.github.arvide.movierecommender.entity.User;
@@ -17,7 +19,6 @@ import io.github.arvide.movierecommender.repository.UserRepository;
 
 @DataJpaTest
 @Import(RecommendationService.class)
-@AutoConfigureTestDatabase
 public class RecommendationServiceTest {
 
     @Autowired
@@ -37,6 +38,8 @@ public class RecommendationServiceTest {
         movie(1, "A");
         movie(2, "B");
         movie(3, "C");
+        movie(4, "D");
+        movie(5, "E");
 
         // users
         user(1);
@@ -46,17 +49,22 @@ public class RecommendationServiceTest {
         // ratings
         rating(1, 1, 2);
         rating(1, 2, 2.5);
+        rating(1, 3, 3);
+        rating(1, 4, 2);
+        rating(1, 5, 1);
 
         rating(2, 1, 4);
         rating(2, 2, 3.5);
-        rating(2, 3, 5);
 
         rating(3, 1, 4);
         rating(3, 2, 2);
         rating(3, 3, 4.5);
+        rating(3, 4, 3);
+        rating(3, 5, 2.5);
+
 
         // Act
-        List<Movie> result = recommendationService.getRecommendationFor(1);
+        List<Recommendation> result = recommendationService.getRecommendationsFor(2);
 
         // Assert
         assertEquals(3, result.size());
