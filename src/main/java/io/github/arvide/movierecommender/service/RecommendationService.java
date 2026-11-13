@@ -1,13 +1,13 @@
 package io.github.arvide.movierecommender.service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import io.github.arvide.movierecommender.entity.Movie;
+import io.github.arvide.movierecommender.dto.Recommendation;
 import io.github.arvide.movierecommender.entity.Rating;
 import io.github.arvide.movierecommender.entity.User;
 import io.github.arvide.movierecommender.repository.MovieRepository;
@@ -26,15 +26,18 @@ public class RecommendationService {
         this.ratingRepo = ratingRepo;
     }
 
-    // 1. Load the target’s ratings.
-    // 2. Find users who rated the same movies.
-    // 3. Score each user: shared movies → differences → squares → sum → square root → 1 / (1 + distance).
-    // 4. Keep the most similar users.
-    // 5. Collect their ratings for movies the target hasn’t seen, weighted by similarity.
-    // 6. Predict each movie’s rating as the weighted average.
-    // 7. Drop movies with too few raters or a low prediction.
-    // 8. Return the highest predicted movies.
-    public List<Movie> getRecommendationFor(Integer userId) {
+    /**
+     * Calculates and returns a list of movie recommendations for a user.
+     *
+     * Uses Euclidian distance to calculate a similarity score between other users
+     * who have rated the same movies.
+     * Calculates a predicted score for movies which users with similar scores have
+     * watched, but the target have not watched.
+     *
+     * @param userId - User to calculate recommendations for.
+     * @return - List of recommendations.
+     */
+    public List<Recommendation> getRecommendationsFor(Integer userId) {
         userRepo.findById(userId).orElseThrow();
 
         // Save all ratings by the target user
@@ -79,7 +82,6 @@ public class RecommendationService {
 
         final int K = 20; // how many neighbours to use
         final int MIN_RATERS = 2; // movie must be rated by at least this many neighbours
-        final double MIN_SCORE = 3.5; // don't recommend below this predicted rating
         final int N = 10; // how many recommendations to return
 
         // Sort top k neighbours by similarity
@@ -109,27 +111,17 @@ public class RecommendationService {
         }
 
         // Predicted rating = weighted average, then filter
-        Map<Integer, Double> predicted = new HashMap<>();
+        List<Recommendation> recommendations = new ArrayList<>();
         for (Integer movieId : weightedSum.keySet()) {
             if (raterCount.get(movieId) < MIN_RATERS)
                 continue;
             double prediction = weightedSum.get(movieId) / similaritySum.get(movieId);
-            if (prediction >= MIN_SCORE) {
-                predicted.put(movieId, prediction);
-            }
+            String title = movieRepo.findById(movieId).orElseThrow().getTitle();
+            recommendations.add(new Recommendation(movieId, title, prediction));
         }
 
-        // Sort by prediction, take top N, load movies in that order
-        List<Integer> topMovieIds = predicted.entrySet().stream()
-                .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
-                .limit(N)
-                .map(Map.Entry::getKey)
-                .toList();
+        recommendations.sort((a, b) -> Double.compare(b.prediction(), a.prediction()));
 
-        Map<Integer, Movie> moviesById = movieRepo.findAllById(topMovieIds).stream()
-                .collect(Collectors.toMap(Movie::getId, m -> m));
-
-        return topMovieIds.stream().map(moviesById::get).toList();
+        return recommendations.stream().limit(N).toList();
     }
-
 }
