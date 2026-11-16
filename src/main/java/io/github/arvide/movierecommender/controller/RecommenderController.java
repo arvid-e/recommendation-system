@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,8 +27,10 @@ public class RecommenderController {
     }
 
     @GetMapping("/{userId}/recommendations")
-    public List<Recommendation> getRecommendations(@PathVariable Integer userId) {
-        return recommendationService.getRecommendationsFor(userId);
+    public List<Recommendation> getRecommendations(
+            @PathVariable Integer userId,
+            @RequestParam(defaultValue = "10") int numberOfResults) {
+        return recommendationService.getRecommendationsFor(userId, numberOfResults);
     }
 
     @ExceptionHandler(NoSuchElementException.class)

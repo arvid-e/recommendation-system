@@ -64,7 +64,7 @@ public class RecommendationServiceTest {
 
 
         // Act
-        List<Recommendation> result = recommendationService.getRecommendationsFor(2);
+        List<Recommendation> result = recommendationService.getRecommendationsFor(2, 3);
 
         // Assert
         assertEquals(3, result.size());

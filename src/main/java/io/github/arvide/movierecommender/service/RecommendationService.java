@@ -37,7 +37,7 @@ public class RecommendationService {
      * @param userId - User to calculate recommendations for.
      * @return - List of recommendations.
      */
-    public List<Recommendation> getRecommendationsFor(Integer userId) {
+    public List<Recommendation> getRecommendationsFor(Integer userId, Integer numberOfResults) {
         userRepo.findById(userId).orElseThrow();
 
         // Save all ratings by the target user
@@ -82,7 +82,6 @@ public class RecommendationService {
 
         final int K = 20; // how many neighbours to use
         final int MIN_RATERS = 2; // movie must be rated by at least this many neighbours
-        final int N = 10; // how many recommendations to return
 
         // Sort top k neighbours by similarity
         List<Map.Entry<Integer, Double>> neighbours = userSimilarityMap.entrySet().stream()
@@ -122,6 +121,6 @@ public class RecommendationService {
 
         recommendations.sort((a, b) -> Double.compare(b.prediction(), a.prediction()));
 
-        return recommendations.stream().limit(N).toList();
+        return recommendations.stream().limit(numberOfResults).toList();
     }
 }
