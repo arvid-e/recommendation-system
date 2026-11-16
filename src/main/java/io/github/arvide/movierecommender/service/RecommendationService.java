@@ -27,18 +27,18 @@ public class RecommendationService {
     }
 
     /**
-     * Calculates and returns a list of movie recommendations for a user.
+     * Find recommendations for a target user using Euclidean distance or Pearson
+     * correlation formula.
      *
-     * Uses Euclidian distance to calculate a similarity score between other users
-     * who have rated the same movies.
-     * Calculates a predicted score for movies which users with similar scores have
-     * watched, but the target have not watched.
-     *
-     * @param userId - User to calculate recommendations for.
+     * @param userId          - User to find recommendations for.
+     * @param numberOfResults - How many results to show.
+     * @param formula         - Which formula to calculate similary score with.
      * @return - List of recommendations.
      */
-    public List<Recommendation> getRecommendationsFor(Integer userId, Integer numberOfResults) {
+    public List<Recommendation> getRecommendationsFor(Integer userId, Integer numberOfResults, String formula) {
         userRepo.findById(userId).orElseThrow();
+
+        final int MIN_SHARED = formula.equals("pearson") ? 3 : 2;
 
         // Save all ratings by the target user
         HashMap<Integer, Double> targetRatings = new HashMap<>();
@@ -50,15 +50,14 @@ public class RecommendationService {
         List<User> candidates = userRepo.findUsersSharingMovieWith(userId);
         HashMap<Integer, List<Rating>> candidateRatings = new HashMap<>();
         HashMap<Integer, Double> userSimilarityMap = new HashMap<>();
-        final int MIN_SHARED = 2;
 
         // Compute similarity for each candidate
         for (User user : candidates) {
             if (user.getId().equals(userId))
                 continue;
 
-            double sumOfSquares = 0;
-            int shared = 0;
+            List<Double> targetRatingList = new ArrayList<>();
+            List<Double> candidateRatingList = new ArrayList<>();
 
             List<Rating> ratings = ratingRepo.findByUserId(user.getId());
             candidateRatings.put(user.getId(), ratings);
@@ -66,17 +65,22 @@ public class RecommendationService {
                 Double targetRating = targetRatings.get(rating.getMovieId());
 
                 if (targetRating != null) {
-                    double diff = targetRating - rating.getRating();
-                    sumOfSquares += diff * diff;
-                    shared++;
+                    targetRatingList.add(targetRating);
+                    candidateRatingList.add(rating.getRating());
                 }
             }
 
-            if (shared < MIN_SHARED)
+            if (targetRatingList.size() < MIN_SHARED)
                 continue;
 
-            double distance = Math.sqrt(sumOfSquares);
-            double similarity = 1 / (1 + distance);
+            double similarity = switch (formula) {
+                case "pearson" -> pearson(targetRatingList, candidateRatingList);
+                default -> euclidean(targetRatingList, candidateRatingList);
+            };
+
+            if (similarity <= 0)
+                continue;
+
             userSimilarityMap.put(user.getId(), similarity);
         }
 
@@ -122,5 +126,35 @@ public class RecommendationService {
         recommendations.sort((a, b) -> Double.compare(b.prediction(), a.prediction()));
 
         return recommendations.stream().limit(numberOfResults).toList();
+    }
+
+    private double euclidean(List<Double> targetRatings, List<Double> candidateRatings) {
+        double sumOfSquares = 0;
+        for (int i = 0; i < targetRatings.size(); i++) {
+            double diff = targetRatings.get(i) - candidateRatings.get(i);
+            sumOfSquares += diff * diff;
+        }
+
+        return 1 / (1 + Math.sqrt(sumOfSquares));
+    }
+
+    private double pearson(List<Double> targetRatings, List<Double> candidateRatings) {
+        int n = targetRatings.size();
+        double meanTarget = targetRatings.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        double meanCandidate = candidateRatings.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+
+        double numerator = 0, sumSqX = 0, sumSqY = 0;
+        for (int i = 0; i < n; i++) {
+            double dx = targetRatings.get(i) - meanTarget;
+            double dy = candidateRatings.get(i) - meanCandidate;
+            numerator += dx * dy;
+            sumSqX += dx * dx;
+            sumSqY += dy * dy;
+        }
+
+        double denominator = Math.sqrt(sumSqX) * Math.sqrt(sumSqY);
+        if (denominator == 0)
+            return 0;
+        return numerator / denominator;
     }
 }
