@@ -29,8 +29,9 @@ public class RecommenderController {
     @GetMapping("/{userId}/recommendations")
     public List<Recommendation> getRecommendations(
             @PathVariable Integer userId,
-            @RequestParam(defaultValue = "10") int numberOfResults) {
-        return recommendationService.getRecommendationsFor(userId, numberOfResults);
+            @RequestParam(defaultValue = "10") int numberOfResults,
+            @RequestParam(defaultValue = "euclidean") String formula) {
+        return recommendationService.getRecommendationsFor(userId, numberOfResults, formula);
     }
 
     @ExceptionHandler(NoSuchElementException.class)

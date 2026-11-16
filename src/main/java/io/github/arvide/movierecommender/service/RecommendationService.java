@@ -1,12 +1,14 @@
 package io.github.arvide.movierecommender.service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import io.github.arvide.movierecommender.dto.Neighbour;
 import io.github.arvide.movierecommender.dto.Recommendation;
 import io.github.arvide.movierecommender.entity.Rating;
 import io.github.arvide.movierecommender.entity.User;
@@ -19,6 +21,8 @@ public class RecommendationService {
     private final MovieRepository movieRepo;
     private final UserRepository userRepo;
     private final RatingRepository ratingRepo;
+    private static final int K = 20; // how many neighbours to use
+    private static final int MIN_RATERS = 2; // movie must be rated by at least this many neighbours
 
     public RecommendationService(MovieRepository movieRepo, UserRepository userRepo, RatingRepository ratingRepo) {
         this.movieRepo = movieRepo;
@@ -35,21 +39,49 @@ public class RecommendationService {
      * @param formula         - Which formula to calculate similary score with.
      * @return - List of recommendations.
      */
-    public List<Recommendation> getRecommendationsFor(Integer userId, Integer numberOfResults, String formula) {
+    public List<Recommendation> getRecommendationsFor(Integer userId, int numberOfResults, String formula) {
         userRepo.findById(userId).orElseThrow();
 
-        final int MIN_SHARED = formula.equals("pearson") ? 3 : 2;
+        Map<Integer, Double> targetRatings = getRatingsMap(userId);
+        List<Neighbour> similarities = calculateSimilarities(userId, targetRatings, formula);
+        List<Neighbour> neighbours = topNeighbours(similarities, K);
 
-        // Save all ratings by the target user
+        return predict(neighbours, targetRatings).stream()
+                .limit(numberOfResults)
+                .toList();
+    }
+
+    /**
+     * Saves all ratings for a user in a ratings map.
+     *
+     * @param userId - The user to get ratings from.
+     * @return - Map with a user's ratings.
+     */
+    private Map<Integer, Double> getRatingsMap(Integer userId) {
         HashMap<Integer, Double> targetRatings = new HashMap<>();
         for (Rating rating : ratingRepo.findByUserId(userId)) {
             targetRatings.put(rating.getMovieId(), rating.getRating());
         }
 
+        return targetRatings;
+    }
+
+    /**
+     * Calculate similarity scores for users and their movie ratings.
+     *
+     * @param userId        - The user id of target user.
+     * @param targetRatings - The target user's ratings.
+     * @param formula       - Which similarity calculation formula to use.
+     * @return - List of neighbour users and their similarity scores.
+     */
+    private List<Neighbour> calculateSimilarities(Integer userId, Map<Integer, Double> targetRatings,
+            String formula) {
+        final int MIN_SHARED = formula.equals("pearson") ? 3 : 2;
+
+        List<Neighbour> neighbours = new ArrayList<>();
+
         // Get all users that has rated at least one same movie
         List<User> candidates = userRepo.findUsersSharingMovieWith(userId);
-        HashMap<Integer, List<Rating>> candidateRatings = new HashMap<>();
-        HashMap<Integer, Double> userSimilarityMap = new HashMap<>();
 
         // Compute similarity for each candidate
         for (User user : candidates) {
@@ -60,7 +92,6 @@ public class RecommendationService {
             List<Double> candidateRatingList = new ArrayList<>();
 
             List<Rating> ratings = ratingRepo.findByUserId(user.getId());
-            candidateRatings.put(user.getId(), ratings);
             for (Rating rating : ratings) {
                 Double targetRating = targetRatings.get(rating.getMovieId());
 
@@ -81,53 +112,73 @@ public class RecommendationService {
             if (similarity <= 0)
                 continue;
 
-            userSimilarityMap.put(user.getId(), similarity);
+            Neighbour neighbour = new Neighbour(user.getId(), similarity, ratings);
+            neighbours.add(neighbour);
+
         }
 
-        final int K = 20; // how many neighbours to use
-        final int MIN_RATERS = 2; // movie must be rated by at least this many neighbours
+        return neighbours;
+    }
 
-        // Sort top k neighbours by similarity
-        List<Map.Entry<Integer, Double>> neighbours = userSimilarityMap.entrySet().stream()
-                .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
-                .limit(K)
+    /**
+     * Gets a sorted list of the top similar neighbours.
+     *
+     * @param similarities - Neighbours with calculated similarities.
+     * @param k            - How many neighbours to use.
+     * @return - List of the top similar neighbours.
+     */
+    private List<Neighbour> topNeighbours(List<Neighbour> similarities, int k) {
+        return similarities.stream()
+                .sorted(Comparator.comparingDouble(Neighbour::similarity).reversed())
+                .limit(k)
                 .toList();
+    }
 
-        // Accumulate weighted ratings for movies the target hasn't rated
+    /**
+     * Calculate score predictions and returns movie recommendations for a user.
+     *
+     * @param neighbours    - Neighbours with calculated similarities.
+     * @param targetRatings - The ratings of the target user.
+     * @return - List of movie recommendations and their predicted scores.
+     */
+    private List<Recommendation> predict(List<Neighbour> neighbours, Map<Integer, Double> targetRatings) {
         Map<Integer, Double> weightedSum = new HashMap<>();
         Map<Integer, Double> similaritySum = new HashMap<>();
         Map<Integer, Integer> raterCount = new HashMap<>();
 
-        for (Map.Entry<Integer, Double> neighbour : neighbours) {
-            double similarity = neighbour.getValue();
-            for (Rating rating : candidateRatings.get(neighbour.getKey())) {
+        for (Neighbour neighbour : neighbours) {
+            for (Rating rating : neighbour.ratings()) {
                 int movieId = rating.getMovieId();
 
                 // skip movies target has seen
                 if (targetRatings.containsKey(movieId))
                     continue;
 
-                weightedSum.merge(movieId, similarity * rating.getRating(), Double::sum);
-                similaritySum.merge(movieId, similarity, Double::sum);
+                weightedSum.merge(movieId, neighbour.similarity() * rating.getRating(), Double::sum);
+                similaritySum.merge(movieId, neighbour.similarity(), Double::sum);
                 raterCount.merge(movieId, 1, Integer::sum);
             }
         }
 
-        // Predicted rating = weighted average, then filter
-        List<Recommendation> recommendations = new ArrayList<>();
-        for (Integer movieId : weightedSum.keySet()) {
-            if (raterCount.get(movieId) < MIN_RATERS)
-                continue;
-            double prediction = weightedSum.get(movieId) / similaritySum.get(movieId);
-            String title = movieRepo.findById(movieId).orElseThrow().getTitle();
-            recommendations.add(new Recommendation(movieId, title, prediction));
-        }
-
-        recommendations.sort((a, b) -> Double.compare(b.prediction(), a.prediction()));
-
-        return recommendations.stream().limit(numberOfResults).toList();
+        return weightedSum.keySet().stream()
+                .filter(id -> raterCount.get(id) >= MIN_RATERS)
+                .map(id -> new Recommendation(id,
+                        movieRepo.findById(id).orElseThrow().getTitle(),
+                        weightedSum.get(id) / similaritySum.get(id)))
+                .sorted(Comparator.comparingDouble(Recommendation::prediction).reversed())
+                .toList();
     }
 
+    /**
+     * Calculate similarity using eaclidean distance.
+     *
+     * Takes the inverse of the average difference of the ratings fo the target user
+     * and the candidate user.
+     *
+     * @param targetRatings    - The target user's ratings.
+     * @param candidateRatings - The candidate user's ratings.
+     * @return - A similarity rating.
+     */
     private double euclidean(List<Double> targetRatings, List<Double> candidateRatings) {
         double sumOfSquares = 0;
         for (int i = 0; i < targetRatings.size(); i++) {
@@ -138,13 +189,19 @@ public class RecommendationService {
         return 1 / (1 + Math.sqrt(sumOfSquares));
     }
 
+    /**
+     * Calculate a similarity rating using pearson correlation formula.
+     *
+     * @param targetRatings    - The target user's ratings.
+     * @param candidateRatings - The candidate user's ratings.
+     * @return - A similarity rating.
+     */
     private double pearson(List<Double> targetRatings, List<Double> candidateRatings) {
-        int n = targetRatings.size();
         double meanTarget = targetRatings.stream().mapToDouble(Double::doubleValue).average().orElse(0);
         double meanCandidate = candidateRatings.stream().mapToDouble(Double::doubleValue).average().orElse(0);
 
         double numerator = 0, sumSqX = 0, sumSqY = 0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < targetRatings.size(); i++) {
             double dx = targetRatings.get(i) - meanTarget;
             double dy = candidateRatings.get(i) - meanCandidate;
             numerator += dx * dy;
