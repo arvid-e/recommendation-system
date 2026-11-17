@@ -22,7 +22,6 @@ public class RecommendationService {
     private final UserRepository userRepo;
     private final RatingRepository ratingRepo;
     private static final int K = 20; // how many neighbours to use
-    private static final int MIN_RATERS = 2; // movie must be rated by at least this many neighbours
 
     public RecommendationService(MovieRepository movieRepo, UserRepository userRepo, RatingRepository ratingRepo) {
         this.movieRepo = movieRepo;
@@ -161,7 +160,6 @@ public class RecommendationService {
         }
 
         return weightedSum.keySet().stream()
-                .filter(id -> raterCount.get(id) >= MIN_RATERS)
                 .map(id -> new Recommendation(id,
                         movieRepo.findById(id).orElseThrow().getTitle(),
                         weightedSum.get(id) / similaritySum.get(id)))
