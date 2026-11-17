@@ -1,64 +1,70 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
-</head>
+  </head>
 
-<body>
-
+  <body>
     <div class="inputs">
+      <div class="user-container">
+        <label for="user-select">User: </label>
+        <select id="user-select" name="user">
+          <option value="1">1: Andy</option>
+          <option value="2">2: Isabell</option>
+          <option value="3">3: John</option>
+          <option value="4">4: Angela</option>
+          <option value="5">5: Will</option>
+          <option value="6">6: Alicia</option>
+          <option value="7">7: Billy</option>
+          <option value="8">8: Rachel</option>
+        </select>
+      </div>
 
-        <div class="user-container">
-            <label for="user-select">User: </label>
-            <select id="user-select" name="user">
-                <option value="1">1: Andy</option>
-                <option value="2">2: Isabell</option>
-                <option value="3">3: John</option>
-                <option value="4">4: Angela</option>
-                <option value="5">5: Will</option>
-                <option value="6">6: Alicia</option>
-                <option value="7">7: Billy</option>
-                <option value="8">8: Rachel</option>
-            </select>
-        </div>
+      <div class="formula-container">
+        <label for="formula-select">Formula:</label>
+        <select id="formula-select" name="formula">
+          <option value="euclidean">Euclidean</option>
+          <option value="pearson">Pearson</option>
+        </select>
+      </div>
 
-        <div class="formula-container">
-            <label for="formula-select">Formula:</label>
-            <select id="formula-select" name="formula">
-                <option value="euclidean">Euclidean</option>
-                <option value="pearson">Pearson</option>
-            </select>
-        </div>
-
-        <div class="result-number-container">
-            <label for="result-number">Results:</label>
-            <input type="text" id="result-number" name="result-number"><br>
-        </div>
-
-
+      <div class="result-number-container">
+        <label for="result-number">Results:</label>
+        <input type="text" id="result-number" name="result-number" /><br />
+      </div>
     </div>
 
     <div class="buttons">
-        <button id="find-recommendations">Find recommended movies</button>
+      <button id="find-recommendations">Find recommended movies</button>
+      <button id="find-neighbours">Find similar users</button>
     </div>
 
-    <table id="table">
+    <div class="tables">
+      <table id="recommendation-table">
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>Movie</th>
-                <th>Score</th>
-            </tr>
+          <tr>
+            <th>ID</th>
+            <th>Movie</th>
+            <th>Score</th>
+          </tr>
         </thead>
-        <tbody></tbody>
-    </table>
+        <tbody id="recommendation-body"></tbody>
+      </table>
 
-
-</body>
-
+      <table id="neighbour-table">
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>User</th>
+            <th>Similarity</th>
+          </tr>
+        </thead>
+        <tbody id="neighbour-body"></tbody>
+      </table>
+    </div>
+  </body>
 </html>

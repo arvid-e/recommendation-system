@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
+import io.github.arvide.movierecommender.dto.MatchingUser;
 import io.github.arvide.movierecommender.dto.Neighbour;
 import io.github.arvide.movierecommender.dto.Recommendation;
 import io.github.arvide.movierecommender.entity.Rating;
@@ -111,7 +112,7 @@ public class RecommendationService {
             if (similarity <= 0)
                 continue;
 
-            Neighbour neighbour = new Neighbour(user.getId(), similarity, ratings);
+            Neighbour neighbour = new Neighbour(user.getId(), user.getName(), similarity, ratings);
             neighbours.add(neighbour);
 
         }
@@ -211,5 +212,24 @@ public class RecommendationService {
         if (denominator == 0)
             return 0;
         return numerator / denominator;
+    }
+
+    /**
+     * Get the top matching users for the target user.
+     * 
+     * @param userId          - Target user.
+     * @param numberOfResults - How many results to return.
+     * @param formula         - Which formula to use.
+     * @return
+     */
+    public List<MatchingUser> getMatchingUsersFor(Integer userId, int numberOfResults, String formula) {
+        userRepo.findById(userId).orElseThrow();
+
+        Map<Integer, Double> targetRatings = getRatingsMap(userId);
+        List<Neighbour> neighbours = calculateSimilarities(userId, targetRatings, formula);
+
+        return topNeighbours(neighbours, numberOfResults).stream()
+                .map(n -> new MatchingUser(n.userId(), n.name(), n.similarity()))
+                .toList();
     }
 }

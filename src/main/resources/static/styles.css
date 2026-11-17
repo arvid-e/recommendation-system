@@ -18,6 +18,11 @@ table {
   min-width: 400px;
 }
 
+.tables {
+  display: flex;
+  gap: 20px;
+}
+
 th, td {
   padding: 8px 14px;
   text-align: left;

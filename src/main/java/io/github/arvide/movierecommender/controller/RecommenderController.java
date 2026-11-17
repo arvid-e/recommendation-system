@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.arvide.movierecommender.dto.MatchingUser;
+import io.github.arvide.movierecommender.dto.Neighbour;
 import io.github.arvide.movierecommender.dto.Recommendation;
 import io.github.arvide.movierecommender.service.RecommendationService;
 
@@ -32,6 +34,14 @@ public class RecommenderController {
             @RequestParam(defaultValue = "10") int numberOfResults,
             @RequestParam(defaultValue = "euclidean") String formula) {
         return recommendationService.getRecommendationsFor(userId, numberOfResults, formula);
+    }
+
+    @GetMapping("/{userId}/neighbours")
+    public List<MatchingUser> getNeighbours(
+            @PathVariable Integer userId,
+            @RequestParam(defaultValue = "10") int numberOfResults,
+            @RequestParam(defaultValue = "euclidean") String formula) {
+        return recommendationService.getMatchingUsersFor(userId, numberOfResults, formula);
     }
 
     @ExceptionHandler(NoSuchElementException.class)
