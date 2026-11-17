@@ -186,7 +186,7 @@ public class RecommendationService {
             sumOfSquares += diff * diff;
         }
 
-        return 1 / (1 + Math.sqrt(sumOfSquares));
+        return 1 / (1 + sumOfSquares);
     }
 
     /**
