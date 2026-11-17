@@ -18,7 +18,7 @@ async function loadNeighbours (userId, formula, numberOfResults) {
       <tr>
         <td>${m.userId}</td>
         <td>${m.name}</td>
-        <td>${m.similarity}</td>
+        <td>${Number(m.similarity).toFixed(4)}</td>
       </tr>`).join('');
 }
 
